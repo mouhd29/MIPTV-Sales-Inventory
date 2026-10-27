@@ -1,6 +1,6 @@
 'use client';
 import {useState} from 'react';
 import {authClient} from '@/lib/auth/client';
-export default function SignIn(){const[email,setEmail]=useState('mouhd29@gmail.com');const[password,setPassword]=useState('');const[error,setError]=useState('');const[busy,setBusy]=useState(false);
+export default function SignIn(){const[email,setEmail]=useState('mouhd29@hotmail.com');const[password,setPassword]=useState('');const[error,setError]=useState('');const[busy,setBusy]=useState(false);
 async function submit(e:React.FormEvent){e.preventDefault();setError('');setBusy(true);try{const r=await authClient.signIn.email({email,password});if(r.error)throw Error(r.error.message);window.location.href='/';}catch(e){setError(e instanceof Error?e.message:'Sign in failed')}finally{setBusy(false)}}
 return <main style={{minHeight:'100vh',display:'grid',placeItems:'center',background:'#edf3f8'}}><form onSubmit={submit} style={{width:'min(420px,92vw)',padding:32,background:'white',borderRadius:12}}><h1>MIPTV</h1><h2>Administrator sign in</h2><label>Email<input type="email" required value={email} onChange={e=>setEmail(e.target.value)} style={{width:'100%',padding:12,margin:'8px 0 15px'}}/></label><label>Password<input type="password" required value={password} onChange={e=>setPassword(e.target.value)} style={{width:'100%',padding:12,margin:'8px 0 15px'}}/></label>{error&&<p style={{color:'red'}}>{error}</p>}<button disabled={busy} style={{background:'#0d3657',color:'white',padding:13,width:'100%',border:0}}>{busy?'Signing in...':'Sign in'}</button></form></main>}
