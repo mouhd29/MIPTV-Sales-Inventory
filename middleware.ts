@@ -1,3 +1,5 @@
 import {auth} from '@/lib/auth/server';
 export default auth.middleware({loginUrl:'/auth/sign-in'});
-export const config={matcher:['/((?!_next/static|_next/image|favicon.ico).*)']};
+// Keep sign-in, password recovery, and Neon Auth endpoints accessible without a session.
+// The records API also checks requireAdmin() server-side.
+export const config={matcher:['/','/api/records/:path*']};
