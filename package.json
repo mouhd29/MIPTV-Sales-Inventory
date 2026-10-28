@@ -15,13 +15,15 @@
     "lucide-react": "^0.468.0",
     "postgres": "^3.4.7",
     "@neondatabase/auth": "0.7.0-beta",
-    "jsbarcode": "^3.12.1"
+    "jsbarcode": "^3.12.1",
+    "qrcode": "^1.5.4"
   },
   "devDependencies": {
     "typescript": "^5.7.0",
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
-    "@types/jsbarcode": "^3.11.4"
+    "@types/jsbarcode": "^3.11.4",
+    "@types/qrcode": "^1.5.5"
   }
 }
