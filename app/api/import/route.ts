@@ -5,9 +5,9 @@ import {canEdit} from '@/lib/auth/server';
 export const dynamic='force-dynamic';
 const required:Record<string,string[]>={
  customers:['code','name'],suppliers:['code','name'],items:['sku','name'],
- sales_orders:['number'],sales_invoices:['number'],purchase_orders:['number']
+ sales_orders:['number'],sales_invoices:['number'],purchase_orders:['number'],address_book:['code','name'],tasks:['title'],prospects:['code','name'],sales_leads:['code','description'],stock_transfers:['reference'],kits:['kit_sku','name'],inventory_categories:['code','name'],inventory_attributes:['code','name'],inventory_locations:['code','name'],estimates:['number']
 };
-const numeric=new Set(['cost','price','quantity','total']);
+const numeric=new Set(['cost','price','quantity','total','estimated_value','component_quantity']);
 export async function POST(req:NextRequest){
  if(!await canEdit())return NextResponse.json({error:'Forbidden'},{status:403});
  try{
@@ -25,7 +25,7 @@ export async function POST(req:NextRequest){
     const val=raw[k]==null?'':String(raw[k]).trim();
     if(val.length>2000)return NextResponse.json({error:`Row ${i+2}: ${k} is too long`},{status:400});
     if(numeric.has(k)&&val!==''&&(!Number.isFinite(Number(val))||!/^-?(?:\d+\.?\d*|\.\d+)$/.test(val)))return NextResponse.json({error:`Row ${i+2}: invalid number for ${k}`},{status:400});
-    if(k==='date'&&val!==''&&!/^\d{4}-\d{2}-\d{2}$/.test(val))return NextResponse.json({error:`Row ${i+2}: date must be YYYY-MM-DD`},{status:400});
+    if(['date','due_date'].includes(k)&&val!==''&&!/^\d{4}-\d{2}-\d{2}$/.test(val))return NextResponse.json({error:`Row ${i+2}: date must be YYYY-MM-DD`},{status:400});
     row[k]=val===''?null:val;
    }
    for(const k of required[spec.table]||[])if(!row[k])return NextResponse.json({error:`Row ${i+2}: ${k} is required`},{status:400});
