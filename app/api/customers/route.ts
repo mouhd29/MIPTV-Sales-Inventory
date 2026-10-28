@@ -12,7 +12,7 @@ export async function GET(req:NextRequest){
  const [count,customers,stats]=await Promise.all([
  db()`SELECT count(*)::int total FROM customers WHERE ${!query} OR code ILIKE ${'%'+query+'%'} OR name ILIKE ${'%'+query+'%'} OR email ILIKE ${'%'+query+'%'} OR phone ILIKE ${'%'+query+'%'}`,
  db()`SELECT id,code,name,email,phone,address,created_at FROM customers WHERE ${!query} OR code ILIKE ${'%'+query+'%'} OR name ILIKE ${'%'+query+'%'} OR email ILIKE ${'%'+query+'%'} OR phone ILIKE ${'%'+query+'%'} ORDER BY name ASC,id DESC LIMIT ${size} OFFSET ${offset}`,
- db()`SELECT count(*)::int total,count(*) FILTER(WHERE NULLIF(trim(email),'') IS NOT NULL)::int with_email,count(*) FILTER(WHERE NULLIF(trim(phone),'') IS NOT NULL)::int with_phone FROM customers`
+ db()`SELECT count(*)::int total,count(*) FILTER(WHERE NULLIF(trim(email),'') IS NOT NULL)::int with_email,count(*) FILTER(WHERE NULLIF(trim(phone),'') IS NOT NULL)::int with_phone,count(*) FILTER(WHERE NULLIF(trim(email),'') IS NULL AND NULLIF(trim(phone),'') IS NULL)::int missing_contact FROM customers`
  ]);
  return NextResponse.json({customers,total:count[0].total,page,pageSize:size,stats:stats[0]});
  }catch(e){return fail(String(e),500);}
