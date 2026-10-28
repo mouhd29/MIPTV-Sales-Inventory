@@ -57,14 +57,14 @@ export async function POST(req:NextRequest){
  const number=String(input.number||'').trim();
  if(!number)throw Error('Invoice number is required');
  // Lock stock rows and check total quantities per SKU before any issue.
- const qty=new Map<string,number>();for(const l of lines)qty.set(String(l.sku),(qty.get(String(l.sku))||0)+Number(l.quantity));
+ const costs=new Map<string,number>();const qty=new Map<string,number>();for(const l of lines)qty.set(String(l.sku),(qty.get(String(l.sku))||0)+Number(l.quantity));
  for(const [sku,amount] of [...qty.entries()].sort(([a],[b])=>a.localeCompare(b))){
- const items=await tx`SELECT quantity FROM items WHERE sku=${sku} FOR UPDATE`;
+ const items=await tx`SELECT quantity,cost FROM items WHERE sku=${sku} FOR UPDATE`;
  if(!items.length)throw Error('Product not found: '+sku);
- if(Number(items[0].quantity)<amount)throw Error('Insufficient stock for '+sku+' (available '+items[0].quantity+', required '+amount+')');
+ costs.set(sku,Number(items[0].cost));if(Number(items[0].quantity)<amount)throw Error('Insufficient stock for '+sku+' (available '+items[0].quantity+', required '+amount+')');
  }
  const invoice=await tx`INSERT INTO sales_invoices(number,customer_code,date,status,total,sales_order_id) VALUES(${number},${order.customer_code},CURRENT_DATE,'Issued',${order.total},${orderId}) RETURNING id,number`;
- for(const l of lines)await tx`INSERT INTO sales_invoice_lines(invoice_id,sku,quantity,unit_price) VALUES(${invoice[0].id},${l.sku},${l.quantity},${l.unit_price})`;
+ for(const l of lines)await tx`INSERT INTO sales_invoice_lines(invoice_id,sku,quantity,unit_price,unit_cost) VALUES(${invoice[0].id},${l.sku},${l.quantity},${l.unit_price},${costs.get(String(l.sku))||0})`;
  for(const [sku,amount] of qty){await tx`UPDATE items SET quantity=quantity-${amount} WHERE sku=${sku}`;await tx`INSERT INTO stock_movements(sku,movement_type,quantity,reference) VALUES(${sku},'OUT',${amount},${number})`;}
  await tx`UPDATE sales_orders SET status='Invoiced' WHERE id=${orderId}`;
  return invoice[0];
