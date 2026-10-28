@@ -1,7 +1,7 @@
 export const sections = [
 {title:'Home',items:['Dashboard','Data Import','Address Book','My Tasks']},
 {title:'Accounts',items:['Customer List','Prospect List','Supplier List','Sales Leads']},
-{title:'Inventory',items:['Inventory List','Stock Transfers','Kitting & Bundling','Manage Categories','Manage Attributes','Locations & Zones']},
+{title:'Inventory',items:['Inventory List','Inventory Costing','Stock Transfers','Kitting & Bundling','Manage Categories','Manage Attributes','Locations & Zones']},
 {title:'Documents',items:['Sales Orders','Purchase Orders','Estimates','Sales Invoices']},
 {title:'Reports',items:['Sales Report','Purchase Report','Inventory Report']},
 {title:'Administration',items:['Settings','Users & Roles']}
