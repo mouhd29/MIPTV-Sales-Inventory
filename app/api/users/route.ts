@@ -6,8 +6,9 @@ export async function GET(){
  const access=await currentAccess();
  if(!access)return NextResponse.json({error:'Forbidden'},{status:403});
  if(access.role!=='admin')return NextResponse.json({email:access.email,role:access.role});
- const rows=await db()`SELECT email,role,active,updated_at FROM app_user_roles ORDER BY email`;
- return NextResponse.json({email:access.email,role:access.role,users:rows});
+ try {const rows=await db()`SELECT email,role,active,updated_at FROM app_user_roles ORDER BY email`;
+ return NextResponse.json({email:access.email,role:access.role,users:rows});}
+ catch {return NextResponse.json({email:access.email,role:access.role,users:[],warning:'Database temporarily unavailable; account permissions are still valid.'});}
 }
 export async function PUT(req:NextRequest){
  if(!await requireAdmin())return NextResponse.json({error:'Admin only'},{status:403});
