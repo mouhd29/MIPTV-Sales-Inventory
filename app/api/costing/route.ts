@@ -19,6 +19,15 @@ export async function POST(req:NextRequest){
  if(!await canEdit())return error('Administrator or Editor required',403);
  try{
  const p=await req.json();
+ if(p.action==='edit_item'){
+ const original=String(p.original_sku||'').trim(),sku=String(p.sku||'').trim(),name=String(p.name||'').trim(),category=String(p.category||'').trim(),unit=String(p.unit||'').trim();
+ const cost=Number(p.cost),price=Number(p.price);
+ if(!original||!sku||!name||!Number.isFinite(cost)||cost<0||!Number.isFinite(price)||price<0)return error('SKU, name and valid non-negative prices are required');
+ if(sku!==original)return error('SKU is the permanent inventory identifier. To change it, create a new item and transfer stock.');
+ const rows=await db()`UPDATE items SET name=${name},category=${category},unit=${unit},cost=${cost},price=${price} WHERE sku=${original} RETURNING sku,name,category,unit,cost,price,quantity`;
+ if(!rows.length)return error('Item not found',404);
+ return NextResponse.json(rows[0]);
+ }
  if(p.action==='price'){
  const sku=String(p.sku||'').trim(),cost=Number(p.cost),price=Number(p.price);
  if(!sku||!Number.isFinite(cost)||cost<0||!Number.isFinite(price)||price<0)return error('Valid SKU, cost and price required');
