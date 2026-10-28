@@ -1,5 +1,5 @@
 export const sections = [
-{title:'Home',items:['Dashboard','Address Book','My Tasks']},
+{title:'Home',items:['Dashboard','Data Import','Address Book','My Tasks']},
 {title:'Accounts',items:['Customer List','Prospect List','Supplier List','Sales Leads']},
 {title:'Inventory',items:['Inventory List','Stock Transfers','Kitting & Bundling','Manage Categories','Manage Attributes','Locations & Zones']},
 {title:'Documents',items:['Sales Orders','Purchase Orders','Estimates','Sales Invoices']},
