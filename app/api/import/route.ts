@@ -24,8 +24,8 @@ export async function POST(req:NextRequest){
    for(const k of keys){
     const val=raw[k]==null?'':String(raw[k]).trim();
     if(val.length>2000)return NextResponse.json({error:`Row ${i+2}: ${k} is too long`},{status:400});
-    if(numeric.has(k)&&val!==''&&(!Number.isFinite(Number(val))||!/^-?(?:\\d+\\.?\\d*|\\.\\d+)$/.test(val)))return NextResponse.json({error:`Row ${i+2}: invalid number for ${k}`},{status:400});
-    if(k==='date'&&val!==''&&!/^\\d{4}-\\d{2}-\\d{2}$/.test(val))return NextResponse.json({error:`Row ${i+2}: date must be YYYY-MM-DD`},{status:400});
+    if(numeric.has(k)&&val!==''&&(!Number.isFinite(Number(val))||!/^-?(?:\d+\.?\d*|\.\d+)$/.test(val)))return NextResponse.json({error:`Row ${i+2}: invalid number for ${k}`},{status:400});
+    if(k==='date'&&val!==''&&!/^\d{4}-\d{2}-\d{2}$/.test(val))return NextResponse.json({error:`Row ${i+2}: date must be YYYY-MM-DD`},{status:400});
     row[k]=val===''?null:val;
    }
    for(const k of required[spec.table]||[])if(!row[k])return NextResponse.json({error:`Row ${i+2}: ${k} is required`},{status:400});
