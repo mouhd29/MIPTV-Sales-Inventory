@@ -8,7 +8,7 @@ export async function GET(){
  try{
  const [customers,items,orders,invoices,orderLines,invoiceLines,movements]=await Promise.all([
  db()`SELECT code,name,email,phone,address FROM customers ORDER BY name LIMIT 2000`,
- db()`SELECT sku,name,category,unit,cost,price,quantity FROM items ORDER BY name LIMIT 2000`,
+ db()`SELECT sku,name,category,unit,cost,price,quantity,image_data FROM items ORDER BY name LIMIT 2000`,
  db()`SELECT o.*,c.name customer_name,i.id invoice_id,i.number invoice_number FROM sales_orders o LEFT JOIN customers c ON c.code=o.customer_code LEFT JOIN sales_invoices i ON i.sales_order_id=o.id ORDER BY o.id DESC LIMIT 500`,
  db()`SELECT i.*,c.name customer_name,o.number order_number FROM sales_invoices i LEFT JOIN customers c ON c.code=i.customer_code LEFT JOIN sales_orders o ON o.id=i.sales_order_id ORDER BY i.id DESC LIMIT 500`,
  db()`SELECT l.* FROM sales_order_lines l JOIN (SELECT id FROM sales_orders ORDER BY id DESC LIMIT 500) o ON o.id=l.order_id ORDER BY l.id`,
