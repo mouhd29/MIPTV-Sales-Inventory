@@ -21,10 +21,11 @@ export async function POST(req:NextRequest){
  const p=await req.json();
  if(p.action==='edit_item'){
  const original=String(p.original_sku||'').trim(),sku=String(p.sku||'').trim(),name=String(p.name||'').trim(),category=String(p.category||'').trim(),unit=String(p.unit||'').trim();
- const cost=Number(p.cost),price=Number(p.price);
+ const cost=Number(p.cost),price=Number(p.price);const image=p.image_data===null?null:String(p.image_data||'');
+ if(image&&(!/^data:image\/(jpeg|png|webp);base64,[a-zA-Z0-9+/=]+$/.test(image)||image.length>750000))return error('Use JPG, PNG or WebP image smaller than 500 KB');
  if(!original||!sku||!name||!Number.isFinite(cost)||cost<0||!Number.isFinite(price)||price<0)return error('SKU, name and valid non-negative prices are required');
  if(sku!==original)return error('SKU is the permanent inventory identifier. To change it, create a new item and transfer stock.');
- const rows=await db()`UPDATE items SET name=${name},category=${category},unit=${unit},cost=${cost},price=${price} WHERE sku=${original} RETURNING sku,name,category,unit,cost,price,quantity`;
+ const rows=await db()`UPDATE items SET name=${name},category=${category},unit=${unit},cost=${cost},price=${price},image_data=${image} WHERE sku=${original} RETURNING sku,name,category,unit,cost,price,quantity`;
  if(!rows.length)return error('Item not found',404);
  return NextResponse.json(rows[0]);
  }
