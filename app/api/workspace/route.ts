@@ -55,6 +55,8 @@ export async function POST(req:NextRequest){
  const lines=await tx`SELECT sku,quantity,unit_price FROM sales_order_lines WHERE order_id=${orderId}`;
  if(!lines.length)throw Error('This order has no product lines');
  const number=String(input.number||'').trim();
+ const notes=String(input.notes||'').trim();
+ if(notes.length>5000)throw Error('Invoice notes must be under 5000 characters');
  if(!number)throw Error('Invoice number is required');
  // Lock stock rows and check total quantities per SKU before any issue.
  const costs=new Map<string,number>();const qty=new Map<string,number>();for(const l of lines)qty.set(String(l.sku),(qty.get(String(l.sku))||0)+Number(l.quantity));
@@ -63,7 +65,7 @@ export async function POST(req:NextRequest){
  if(!items.length)throw Error('Product not found: '+sku);
  costs.set(sku,Number(items[0].cost));if(Number(items[0].quantity)<amount)throw Error('Insufficient stock for '+sku+' (available '+items[0].quantity+', required '+amount+')');
  }
- const invoice=await tx`INSERT INTO sales_invoices(number,customer_code,date,status,total,sales_order_id) VALUES(${number},${order.customer_code},CURRENT_DATE,'Issued',${order.total},${orderId}) RETURNING id,number`;
+ const invoice=await tx`INSERT INTO sales_invoices(number,customer_code,date,status,total,sales_order_id,notes) VALUES(${number},${order.customer_code},CURRENT_DATE,'Issued',${order.total},${orderId},${notes}) RETURNING id,number`;
  for(const l of lines)await tx`INSERT INTO sales_invoice_lines(invoice_id,sku,quantity,unit_price,unit_cost) VALUES(${invoice[0].id},${l.sku},${l.quantity},${l.unit_price},${costs.get(String(l.sku))||0})`;
  for(const [sku,amount] of qty){const updated=await tx`UPDATE items SET quantity=quantity-${amount} WHERE sku=${sku} RETURNING quantity,cost`;await tx`INSERT INTO stock_movements(sku,movement_type,quantity,reference,unit_cost,stock_balance_after,average_cost_after) VALUES(${sku},'OUT',${amount},${number},${costs.get(sku)||0},${updated[0].quantity},${updated[0].cost})`;}
  await tx`UPDATE sales_orders SET status='Invoiced' WHERE id=${orderId}`;
