@@ -34,12 +34,13 @@ export async function POST(req:NextRequest){
  if(input.action==='create_order'){
  const number=String(input.number||'').trim(),customer=String(input.customer_code||'').trim();
  if(!number||!customer)return bad('Order number and customer are required');
+ const documentDate=String(input.date||new Date().toISOString().slice(0,10));if(!/^\d{4}-\d{2}-\d{2}$/.test(documentDate)||Number.isNaN(Date.parse(documentDate)))return bad('Valid order date required');
  const lines=parseLines(input.lines);
  const result=await db().begin(async tx=>{
  const found=await tx`SELECT code FROM customers WHERE code=${customer}`;if(!found.length)throw Error('Customer not found');
  for(const l of lines){const foundItem=await tx`SELECT sku FROM items WHERE sku=${l.sku}`;if(!foundItem.length)throw Error('Unknown product: '+l.sku);}
  const total=lines.reduce((n,l)=>n+l.quantity*l.unit_price,0);
- const rows=await tx`INSERT INTO sales_orders(number,customer_code,date,status,total) VALUES(${number},${customer},CURRENT_DATE,'Draft',${total}) RETURNING id,number`;
+ const rows=await tx`INSERT INTO sales_orders(number,customer_code,date,status,total) VALUES(${number},${customer},${documentDate},'Draft',${total}) RETURNING id,number`;
  for(const l of lines)await tx`INSERT INTO sales_order_lines(order_id,sku,quantity,unit_price) VALUES(${rows[0].id},${l.sku},${l.quantity},${l.unit_price})`;
  return rows[0];
  });return NextResponse.json(result,{status:201});
@@ -56,6 +57,7 @@ export async function POST(req:NextRequest){
  if(!lines.length)throw Error('This order has no product lines');
  const number=String(input.number||'').trim();
  const notes=String(input.notes||'').trim();
+ const documentDate=String(input.date||new Date().toISOString().slice(0,10));if(!/^\d{4}-\d{2}-\d{2}$/.test(documentDate)||Number.isNaN(Date.parse(documentDate)))throw Error('Valid invoice date required');
  if(notes.length>5000)throw Error('Invoice notes must be under 5000 characters');
  if(!number)throw Error('Invoice number is required');
  // Lock stock rows and check total quantities per SKU before any issue.
@@ -65,7 +67,7 @@ export async function POST(req:NextRequest){
  if(!items.length)throw Error('Product not found: '+sku);
  costs.set(sku,Number(items[0].cost));if(Number(items[0].quantity)<amount)throw Error('Insufficient stock for '+sku+' (available '+items[0].quantity+', required '+amount+')');
  }
- const invoice=await tx`INSERT INTO sales_invoices(number,customer_code,date,status,total,sales_order_id,notes) VALUES(${number},${order.customer_code},CURRENT_DATE,'Issued',${order.total},${orderId},${notes}) RETURNING id,number`;
+ const invoice=await tx`INSERT INTO sales_invoices(number,customer_code,date,status,total,sales_order_id,notes) VALUES(${number},${order.customer_code},${documentDate},'Issued',${order.total},${orderId},${notes}) RETURNING id,number`;
  for(const l of lines)await tx`INSERT INTO sales_invoice_lines(invoice_id,sku,quantity,unit_price,unit_cost) VALUES(${invoice[0].id},${l.sku},${l.quantity},${l.unit_price},${costs.get(String(l.sku))||0})`;
  for(const [sku,amount] of qty){const updated=await tx`UPDATE items SET quantity=quantity-${amount} WHERE sku=${sku} RETURNING quantity,cost`;await tx`INSERT INTO stock_movements(sku,movement_type,quantity,reference,unit_cost,stock_balance_after,average_cost_after) VALUES(${sku},'OUT',${amount},${number},${costs.get(sku)||0},${updated[0].quantity},${updated[0].cost})`;}
  await tx`UPDATE sales_orders SET status='Invoiced' WHERE id=${orderId}`;
