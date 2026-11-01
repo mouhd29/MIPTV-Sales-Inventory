@@ -45,7 +45,7 @@ export async function POST(req:NextRequest){
  const weighted=(previousQty*previousCost+qty*cost)/(previousQty+qty);
  const row=await tx`INSERT INTO inventory_batches(sku,batch_number,quantity,unit_cost,notes) VALUES(${sku},${batch},${qty},${cost},${notes}) RETURNING *`;
  await tx`UPDATE items SET quantity=quantity+${qty},cost=${weighted} WHERE sku=${sku}`;
- await tx`INSERT INTO stock_movements(sku,movement_type,quantity,reference) VALUES(${sku},'IN',${qty},${'BATCH:'+batch})`;
+ await tx`INSERT INTO stock_movements(sku,movement_type,quantity,reference,unit_cost,stock_balance_after,average_cost_after) VALUES(${sku},'IN',${qty},${'BATCH:'+batch},${cost},${previousQty+qty},${weighted})`;
  return row[0];
  });return NextResponse.json(result,{status:201});
  }
