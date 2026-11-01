@@ -70,7 +70,7 @@ export async function POST(req:NextRequest){
  const app=(oldQty*oldCost+amount*purchaseCost)/newQty;
  await tx`UPDATE items SET quantity=${newQty},cost=${app} WHERE sku=${line.sku}`;
  await tx`UPDATE purchase_order_lines SET received_quantity=received_quantity+${amount} WHERE id=${line.id}`;
- await tx`INSERT INTO stock_movements(sku,movement_type,quantity,reference) VALUES(${line.sku},'IN',${amount},${'PO:'+po[0].number+' / GRN:'+receiptNumber})`;
+ await tx`INSERT INTO stock_movements (sku,movement_type,quantity,reference,unit_cost,stock_balance_after,average_cost_after) VALUES(${line.sku},'IN',${amount},${'PO:'+po[0].number+' / GRN:'+receiptNumber},${purchaseCost},${newQty},${app})`;
  await tx`INSERT INTO purchase_receipt_lines(receipt_id,order_line_id,sku,quantity,unit_cost,average_cost_after) VALUES(${receipt[0].id},${line.id},${line.sku},${amount},${purchaseCost},${app})`;
  received++;
  }
