@@ -74,7 +74,7 @@ export async function POST(req:NextRequest){
  const invoice=await tx`INSERT INTO sales_invoices(number,customer_code,date,status,total,sales_order_id,notes) VALUES(${number},${order.customer_code},${documentDate},'Issued',${order.total},${orderId},${notes}) RETURNING id,number`;
  for(const l of lines)await tx`INSERT INTO sales_invoice_lines(invoice_id,sku,quantity,unit_price,unit_cost) VALUES(${invoice[0].id},${l.sku},${l.quantity},${l.unit_price},${costs.get(String(l.sku))||0})`;
  for(const [sku,amount] of qty){const updated=await tx`UPDATE items SET quantity=quantity-${amount} WHERE sku=${sku} RETURNING quantity,cost`;await tx`INSERT INTO stock_movements(sku,movement_type,quantity,reference,unit_cost,stock_balance_after,average_cost_after) VALUES(${sku},'OUT',${amount},${number},${costs.get(sku)||0},${updated[0].quantity},${updated[0].cost})`;}
- if(order.salesperson_id){await tx`INSERT INTO sales_commissions(invoice_id,sales_order_id,salesperson_id,amount,status) VALUES(${invoice[0].id},${orderId},${order.salesperson_id},15.000,'pending')`;}
+ if(order.salesperson_id){const setting=await tx`SELECT default_amount FROM commission_settings WHERE id=1`;const amount=Number(setting[0]?.default_amount??15);await tx`INSERT INTO sales_commissions(invoice_id,sales_order_id,salesperson_id,amount,status) VALUES(${invoice[0].id},${orderId},${order.salesperson_id},${amount},'pending')`;}
  await tx`UPDATE sales_orders SET status='Invoiced' WHERE id=${orderId}`;
  return invoice[0];
  });return NextResponse.json(result,{status:201});
