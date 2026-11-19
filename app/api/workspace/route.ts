@@ -34,6 +34,7 @@ export async function POST(req:NextRequest){
  if(input.action==='create_order'){
  const number=String(input.number||'').trim(),customer=String(input.customer_code||'').trim();
  const salespersonId=input.salesperson_id?Number(input.salesperson_id):null;
+ const paymentStatus=input.payment_status==='Paid'?'Paid':'Not Paid';
  if(salespersonId!==null&&(!Number.isSafeInteger(salespersonId)||salespersonId<1))return bad('Invalid salesperson');
  if(!number||!customer)return bad('Order number and customer are required');
  const documentDate=String(input.date||new Date().toISOString().slice(0,10));if(!/^\d{4}-\d{2}-\d{2}$/.test(documentDate)||Number.isNaN(Date.parse(documentDate)))return bad('Valid order date required');
@@ -43,7 +44,7 @@ export async function POST(req:NextRequest){
  for(const l of lines){const foundItem=await tx`SELECT sku FROM items WHERE sku=${l.sku}`;if(!foundItem.length)throw Error('Unknown product: '+l.sku);}
  if(salespersonId!==null){const agent=await tx`SELECT id FROM salespeople WHERE id=${salespersonId} AND active=true`;if(!agent.length)throw Error('Salesperson is not active');}
  const total=lines.reduce((n,l)=>n+l.quantity*l.unit_price,0);
- const rows=await tx`INSERT INTO sales_orders(number,customer_code,date,status,total,salesperson_id) VALUES(${number},${customer},${documentDate},'Draft',${total},${salespersonId}) RETURNING id,number`;
+ const rows=await tx`INSERT INTO sales_orders(number,customer_code,date,status,total,salesperson_id,payment_status) VALUES(${number},${customer},${documentDate},'Draft',${total},${salespersonId},${paymentStatus}) RETURNING id,number`;
  for(const l of lines)await tx`INSERT INTO sales_order_lines(order_id,sku,quantity,unit_price) VALUES(${rows[0].id},${l.sku},${l.quantity},${l.unit_price})`;
  return rows[0];
  });return NextResponse.json(result,{status:201});
@@ -61,6 +62,7 @@ export async function POST(req:NextRequest){
  if(!lines.length)throw Error('This order has no product lines');
  const number=String(input.number||'').trim();
  const notes=String(input.notes||'').trim();
+ const paymentStatus=input.payment_status==='Paid'?'Paid':'Not Paid';
  const documentDate=String(input.date||new Date().toISOString().slice(0,10));if(!/^\d{4}-\d{2}-\d{2}$/.test(documentDate)||Number.isNaN(Date.parse(documentDate)))throw Error('Valid invoice date required');
  if(notes.length>5000)throw Error('Invoice notes must be under 5000 characters');
  if(!number)throw Error('Invoice number is required');
@@ -71,13 +73,24 @@ export async function POST(req:NextRequest){
  if(!items.length)throw Error('Product not found: '+sku);
  costs.set(sku,Number(items[0].cost));if(Number(items[0].quantity)<amount)throw Error('Insufficient stock for '+sku+' (available '+items[0].quantity+', required '+amount+')');
  }
- const invoice=await tx`INSERT INTO sales_invoices(number,customer_code,date,status,total,sales_order_id,notes) VALUES(${number},${order.customer_code},${documentDate},'Issued',${order.total},${orderId},${notes}) RETURNING id,number`;
+ const invoice=await tx`INSERT INTO sales_invoices(number,customer_code,date,status,total,sales_order_id,notes,payment_status,paid_at) VALUES(${number},${order.customer_code},${documentDate},'Issued',${order.total},${orderId},${notes},${paymentStatus},${paymentStatus==='Paid'?new Date():null}) RETURNING id,number`;
  for(const l of lines)await tx`INSERT INTO sales_invoice_lines(invoice_id,sku,quantity,unit_price,unit_cost) VALUES(${invoice[0].id},${l.sku},${l.quantity},${l.unit_price},${costs.get(String(l.sku))||0})`;
  for(const [sku,amount] of qty){const updated=await tx`UPDATE items SET quantity=quantity-${amount} WHERE sku=${sku} RETURNING quantity,cost`;await tx`INSERT INTO stock_movements(sku,movement_type,quantity,reference,unit_cost,stock_balance_after,average_cost_after) VALUES(${sku},'OUT',${amount},${number},${costs.get(sku)||0},${updated[0].quantity},${updated[0].cost})`;}
  if(order.salesperson_id){const setting=await tx`SELECT default_amount FROM commission_settings WHERE id=1`;const amount=Number(setting[0]?.default_amount??15);await tx`INSERT INTO sales_commissions(invoice_id,sales_order_id,salesperson_id,amount,status) VALUES(${invoice[0].id},${orderId},${order.salesperson_id},${amount},'pending')`;}
- await tx`UPDATE sales_orders SET status='Invoiced' WHERE id=${orderId}`;
+ await tx`UPDATE sales_orders SET status='Invoiced',payment_status=${paymentStatus} WHERE id=${orderId}`;
  return invoice[0];
  });return NextResponse.json(result,{status:201});
+ }
+ if(input.action==='set_invoice_payment'){
+ const id=Number(input.invoice_id),paymentStatus=String(input.payment_status);
+ if(!Number.isSafeInteger(id)||id<1||!['Paid','Not Paid'].includes(paymentStatus))return bad('Invalid invoice or payment status');
+ const reference=String(input.payment_reference||'').trim().slice(0,200);
+ const rows=await db().begin(async tx=>{
+ const inv=await tx`UPDATE sales_invoices SET payment_status=${paymentStatus},paid_at=${paymentStatus==='Paid'?new Date():null},payment_reference=${paymentStatus==='Paid'?reference:null} WHERE id=${id} RETURNING id,sales_order_id,payment_status`;
+ if(!inv.length)throw Error('Invoice not found');
+ if(inv[0].sales_order_id)await tx`UPDATE sales_orders SET payment_status=${paymentStatus} WHERE id=${inv[0].sales_order_id}`;
+ return inv[0];
+ });return NextResponse.json(rows);
  }
  if(input.action==='stock_adjustment'){
  const sku=String(input.sku||'').trim(),amount=Number(input.quantity),direction=String(input.direction),reference=String(input.reference||'Manual adjustment').trim();
