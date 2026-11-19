@@ -54,6 +54,7 @@ export async function POST(req:NextRequest){
  const orders=await tx`SELECT * FROM sales_orders WHERE id=${orderId} FOR UPDATE`;
  if(!orders.length)throw Error('Sales order not found');
  const order=orders[0];
+ if(['active','Historical - Invoiced & Paid'].includes(String(order.status)))throw Error('Historical imported orders cannot be invoiced again');
  const existing=await tx`SELECT id FROM sales_invoices WHERE sales_order_id=${orderId}`;
  if(existing.length)throw Error('An invoice already exists for this order');
  const lines=await tx`SELECT sku,quantity,unit_price FROM sales_order_lines WHERE order_id=${orderId}`;
